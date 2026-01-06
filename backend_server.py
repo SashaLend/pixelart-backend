@@ -211,34 +211,36 @@ def generate_image_file():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+# ============================================================
+# Load model at module level (executed when gunicorn imports)
+# ============================================================
+print("="*60)
+print("PIXEL ART GENERATOR - BACKEND INITIALIZING")
+print("="*60)
+
+# Load model when module is imported
+if not load_model():
+    print("❌ Failed to load model!")
+    # Don't exit - let server start so logs are visible
+else:
+    print("✅ Backend ready!")
+
+print("="*60)
+
+# ============================================================
+# Main entry point (for local development)
+# ============================================================
 if __name__ == '__main__':
-    print("="*60)
-    print("PIXEL ART GENERATOR - BACKEND SERVER")
-    print("="*60)
-    
-    # Load model at startup
-    if not load_model():
-        print("❌ Failed to load model. Exiting.")
-        exit(1)
-    
     print("\n" + "="*60)
-    print("SERVER STARTING")
+    print("RUNNING IN DEVELOPMENT MODE")
     print("="*60)
     print("\nAPI Endpoints:")
     print("  GET  /health           - Health check")
     print("  POST /generate         - Generate art (returns base64)")
     print("  POST /generate_image   - Generate art (returns PNG)")
-    print("\nExample request:")
-    print('  POST /generate')
-    print('  {')
-    print('    "palette": ["#FF0000", "#00FF00", ...],')
-    print('    "width": 480,')
-    print('    "height": 640')
-    print('  }')
     print("\n" + "="*60)
     
-    # Run server
-    # For production, use gunicorn or similar
-    # Render.com sets PORT environment variable
+    # Run server with Flask's development server
+    import os
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port, debug=False)
