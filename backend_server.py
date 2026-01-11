@@ -14,6 +14,8 @@ from PIL import Image
 import io
 import base64
 import os
+import json      
+import random 
 
 app = Flask(__name__)
 CORS(app)  # Allow requests from Android app
