@@ -227,6 +227,122 @@ else:
 
 print("="*60)
 
+#Gallery Data loading
+print("="*60)
+print("LOADING GALLERY DATA")
+print("="*60)
+
+try:
+    with open('gallery_data.json', 'r', encoding='utf-8') as f:
+        GALLERY_DATA = json.load(f)
+    
+    # Create tag index for fast lookups
+    TAG_INDEX = {}
+    for img in GALLERY_DATA:
+        for tag in img['tags']:
+            if tag not in TAG_INDEX:
+                TAG_INDEX[tag] = []
+            TAG_INDEX[tag].append(img)
+    
+    print(f"✓ Loaded {len(GALLERY_DATA)} images")
+    print(f"✓ Found {len(TAG_INDEX)} unique tags")
+    print(f"✓ Tags: {', '.join(sorted(TAG_INDEX.keys()))}")
+    print("="*60)
+    
+except FileNotFoundError:
+    print("⚠️  gallery_data.json not found - Gallery mode will not work")
+    GALLERY_DATA = []
+    TAG_INDEX = {}
+except Exception as e:
+    print(f"❌ Error loading gallery data: {e}")
+    GALLERY_DATA = []
+    TAG_INDEX = {}
+
+@app.route('/gallery/tags', methods=['GET'])
+def get_gallery_tags():
+    """Get list of all available tags"""
+    try:
+        tags = sorted(TAG_INDEX.keys())
+        return jsonify({
+            "tags": tags,
+            "count": len(tags)
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route('/gallery/random', methods=['GET'])
+def get_random_gallery_image():
+    """
+    Get random gallery image by tag and ratio
+    
+    Query params:
+    - tag: Tag to filter by (default: random)
+    - ratio: "1x1" or "3x4" (default: "3x4")
+    
+    Returns:
+    {
+        "id": "flowers_rose",
+        "tags": ["flowers", "nature"],
+        "width": 48,
+        "height": 64,
+        "data": [0,1,2,3,...]
+    }
+    """
+    try:
+        tag = request.args.get('tag', None)
+        ratio = request.args.get('ratio', '3x4')
+        
+        # Get images for this tag
+        if tag and tag in TAG_INDEX:
+            images = TAG_INDEX[tag]
+        else:
+            # No tag or invalid tag - use all images
+            images = GALLERY_DATA
+        
+        if not images:
+            return jsonify({"error": "No images available"}), 404
+        
+        # Pick random image
+        selected = random.choice(images)
+        
+        # Get appropriate ratio data
+        if ratio == '1x1':
+            ratio_data = selected['ratio_1x1']
+        else:
+            ratio_data = selected['ratio_3x4']
+        
+        # Return image data
+        response = {
+            "id": selected['id'],
+            "tags": selected['tags'],
+            "width": ratio_data['width'],
+            "height": ratio_data['height'],
+            "data": ratio_data['data']
+        }
+        
+        return jsonify(response)
+        
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route('/gallery/stats', methods=['GET'])
+def get_gallery_stats():
+    """Get gallery statistics"""
+    try:
+        tag_counts = {}
+        for tag, images in TAG_INDEX.items():
+            tag_counts[tag] = len(images)
+        
+        return jsonify({
+            "total_images": len(GALLERY_DATA),
+            "total_tags": len(TAG_INDEX),
+            "tags": tag_counts
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 # ============================================================
 # Main entry point (for local development)
 # ============================================================
